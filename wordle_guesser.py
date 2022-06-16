@@ -30,25 +30,56 @@ def refine_list(misses, matches, exact_matches, inexact_matches, word_list):
         new_list = [word for word in new_list for l, i in inexact_matches if l in word and word[i] != l]
     return new_list
 
+class play_wordle():
+    def __init__(self, source_list='wordle_words.txt'):
+        self.wordle_dict = source_list
+        self.reset_wordle(read_word_list=True)
+    
+    def reset_wordle(self, read_word_list=False):
+        if read_word_list:
+            self.read_dict()
+        self.remaining_words = np.array(self.words)
+        self.all_misses = set()
+
+    def read_dict(self):
+        with open(self.wordle_dict, 'r') as in_file:
+            self.words = [w.strip() for w in in_file]
+    
+    def get_a_word(self, idx=0, random=False, today=False):
+        if today:
+            # Replace this to work
+            word = self.words[0]
+        elif random:
+            word = self.words[random.range(len(self.words))]
+        else:
+            word = self.words[idx]
+        self.todays_word = word
+        return word
+    
+    def make_a_guess(self, my_guess=None):
+        if my_guess:
+            guess = input("Enter a five letter word: ")
+        else:
+            # Let the computer try to solve the wordle
+            pass
+        self.process_guess(guess)
+    
+    def process_guess(self, my_guess):
+        self.remaining_words = self.remaining_words[~(self.remaining_words == my_guess)]
+        self.misses, self.matches, self.exact_matches, self.inexact_matches = word_match(my_guess, self.todays_word)
+        self.all_misses.update(self.misses)
+        # Reduce the remaining words based on the match results
+        self.remaining_words  = refine_list(self.misses, self.matches, self.exact_matches, self.inexact_matches, self.remaining_words)
+
 
 '''
 Start Code here
 '''
-with open('wordle_words.txt', 'r') as in_file:
-   words = [w.strip() for w in in_file]
+wordle = play_wordle()
+todays_word = play_wordle.get_a_word(0)
+play_wordle.make_a_guess()
 
-remaining_words = np.array(words)
-all_misses = set()
 
-todays_word = get_words(words)[0]
-
-guess = input("Enter a five letter word: ")
-remaining_words = remaining_words[~(remaining_words == guess)]
-
-misses, matches, exact_matches, inexact_matches = word_match(guess, todays_word)
-all_misses.update(misses)
-# Reduce the remaining words based on the match results
-remaining_words  = refine_list(misses, matches, exact_matches, inexact_matches, remaining_words)
 
 # Make another guess
 guess = get_words(remaining_words)[0]
