@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import random
 import numpy as np
 import re # ToDo redo with regex
@@ -5,6 +6,10 @@ import re # ToDo redo with regex
 
 def get_words(word_list, n=1):
     return random.choices(word_list, k=n)
+
+
+def wordle_start():
+    return datetime(2021, 6, 6)
 
 
 def word_match(guess, word):
@@ -31,7 +36,7 @@ def refine_list(misses, matches, exact_matches, inexact_matches, word_list):
     return new_list
 
 class play_wordle():
-    def __init__(self, source_list='wordle_words.txt'):
+    def __init__(self, source_list='wordle_words_unsorted.txt'):
         self.wordle_dict = source_list
         self.reset_wordle(read_word_list=True)
     
@@ -53,7 +58,6 @@ class play_wordle():
             word = self.words[random.range(len(self.words))]
         else:
             word = self.words[idx]
-        self.todays_word = word
         return word
     
     def make_a_guess(self, my_guess=None):
@@ -61,14 +65,18 @@ class play_wordle():
             guess = input("Enter a five letter word: ")
         else:
             # Let the computer try to solve the wordle
-            pass
+            guess = random.choices(self.remaining_words, k=1)[0]
         self.process_guess(guess)
     
     def process_guess(self, my_guess):
+        print(my_guess)
         self.remaining_words = self.remaining_words[~(self.remaining_words == my_guess)]
+        print(1)
         self.misses, self.matches, self.exact_matches, self.inexact_matches = word_match(my_guess, self.todays_word)
+        print(2)
         self.all_misses.update(self.misses)
         # Reduce the remaining words based on the match results
+        print(3)
         self.remaining_words  = refine_list(self.misses, self.matches, self.exact_matches, self.inexact_matches, self.remaining_words)
 
 
@@ -76,8 +84,8 @@ class play_wordle():
 Start Code here
 '''
 wordle = play_wordle()
-todays_word = play_wordle.get_a_word(0)
-play_wordle.make_a_guess()
+todays_word = wordle.get_a_word(0)
+wordle.make_a_guess()
 
 
 
