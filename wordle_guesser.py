@@ -8,10 +8,6 @@ def get_words(word_list, n=1):
     return random.choices(word_list, k=n)
 
 
-def wordle_start():
-    return datetime(2021, 6, 6)
-
-
 def word_match(guess, word):
     misses = set(guess).difference(word)
     matches = set(guess).intersection(word)
@@ -36,6 +32,7 @@ def refine_list(misses, matches, exact_matches, inexact_matches, word_list):
     return new_list
 
 class play_wordle():
+    wordle_start_date = datetime(2021, 6, 3)
     def __init__(self, source_list='wordle_words_unsorted.txt'):
         self.wordle_dict = source_list
         self.reset_wordle(read_word_list=True)
@@ -52,8 +49,8 @@ class play_wordle():
     
     def get_a_word(self, idx=0, random=False, today=False):
         if today:
-            # Replace this to work
-            word = self.words[0]
+            idx_today = (datetime.today() - self.wordle_start_date).days
+            word = self.words[idx_today]
         elif random:
             word = self.words[random.range(len(self.words))]
         else:
@@ -84,7 +81,7 @@ class play_wordle():
 Start Code here
 '''
 wordle = play_wordle()
-todays_word = wordle.get_a_word(0)
+todays_word = wordle.get_a_word(today=True)
 wordle.make_a_guess()
 
 
