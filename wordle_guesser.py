@@ -1,3 +1,28 @@
+"""
+wordle_guesser.py
+
+Description:
+    This code explores various software-based solutions of Wordle.
+
+Creation Date: 05-01-2022?
+Last Modified: 09-02-2022
+
+Version: 1.0.2
+
+Dependencies:
+    Public: numpy
+    Standard: collections, datetime, random, re
+    Private: 
+
+How to use:
+    ToDo
+
+Changes:
+    xx-xx-2022
+
+ToDo:
+    Pull the solver code out and let the play_wordle class accept any solver, and have it generate stats.
+"""
 from collections import Counter
 from datetime import datetime
 import random
@@ -96,9 +121,30 @@ class play_wordle():
 '''
 Start Code here
 '''
-def solve_wordle(seed=None, today=True):
+def solve_wordle(seed=None, today=True, idx=None, random=False):
     wordle = play_wordle()
-    wordle.get_a_word(today=today)
+    wordle.get_a_word(today=today, idx=idx, random=random)
+    if seed:
+        guesses = 1
+        wordle.make_a_guess(seed)
+    else:
+        guesses = 0
+        wordle.make_a_guess()
+    while wordle.remaining_words.size > 0:
+        wordle.make_a_guess()
+        guesses += 1
+    return guesses
+
+
+def remove_old_solver(seed=None, today=True, idx=None, random=False):
+    wordle_start_date = datetime(2021, 6, 1)
+    today_idx = (datetime.today() - wordle_start_date).days + 1
+    wordle = play_wordle()
+    wordle.words = wordle.words[today_idx:]
+    if today:
+        idx = 0
+        today = False    
+    wordle.get_a_word(today=today, idx=idx, random=random)
     if seed:
         guesses = 1
         wordle.make_a_guess(seed)
@@ -111,7 +157,8 @@ def solve_wordle(seed=None, today=True):
     return guesses
 
 """# todays_word = wordle.get_a_word(today=today)"""
-solver_dist = [solve_wordle() for i in range(1000)]
+# Prize --> idx = 457
+solver_dist = [solve_wordle(seed='prize', today=True, idx=None, random=False) for i in range(1000)]
 print("-"*40)
 print("Simple Solver stats:")
 print(f"Fastest: {min(solver_dist)} guesses")
@@ -123,3 +170,19 @@ print("guesses\tcounts")
 for k, c in sorted(Counter(solver_dist).items()):
     print(f"{k}\t{c} times")
 print("-"*40)
+
+# Only new words in the draw:
+solver_dist = [remove_old_solver(seed=None, today=True, idx=None, random=False) for i in range(1000)]
+print("-"*40)
+print("Simple Solver stats:")
+print(f"Fastest: {min(solver_dist)} guesses")
+print(f"Slowest: {max(solver_dist)} guesses")
+print(f"Mean: {np.mean(solver_dist)} guesses")
+print("-"*10)
+print("Solution frequencies:")
+print("guesses\tcounts")
+for k, c in sorted(Counter(solver_dist).items()):
+    print(f"{k}\t{c} times")
+print("-"*40)
+
+
