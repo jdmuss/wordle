@@ -11,7 +11,7 @@ Version: 1.0.2
 
 Dependencies:
     Public: numpy
-    Standard: collections, datetime, random, re
+    Standard: collections, copy, datetime, random, re
     Private: 
 
 How to use:
@@ -24,6 +24,7 @@ ToDo:
     Pull the solver code out and let the play_wordle class accept any solver, and have it generate stats.
 """
 from collections import Counter
+from copy import copy
 from datetime import datetime
 import random
 import numpy as np
@@ -110,6 +111,45 @@ class play_wordle():
         self.all_misses.update(self.misses)
         # Reduce the remaining words based on the match results
         self.remaining_words  = refine_list(self.misses, self.exact_matches, self.inexact_matches, self.remaining_words)
+        if not supress:
+            print(my_guess)
+            if self.remaining_words.size == 0:
+                print(f"Your word {my_guess} was today's word. You win!")
+            else:
+                print(f"Keep guessing, the pool still contains {self.remaining_words.size:,} words.")
+
+
+class simple_solver():
+    wordle_start_date = datetime(2021, 6, 1)
+    def __init__(self, target_word, word_list):
+        self.target_word = target_word
+        self.words = word_list
+        self.remaining_words = np.array(self.words)
+        self.all_misses = set()
+    
+    def make_a_guess(self, guess=None):
+        if not guess:
+            # Let the computer try to solve the wordle
+            guess = random.choices(self.remaining_words, k=1)[0]
+        self.process_guess(guess)
+    
+    def refine_list(self, misses, exact_matches, inexact_matches, word_list):
+        # Remove words that contain letters not in the guess
+        new_list = [word for word in word_list if misses.isdisjoint(word)]
+        # Only keep words with exact matches in the guess
+        if exact_matches:
+            new_list = get_exact_matches(exact_matches, new_list)
+        # Only keep words with inexact matches in the guess, but not in the missed position
+        if inexact_matches:
+            new_list = get_inexact_matches(inexact_matches, new_list)
+        return np.array(new_list)
+
+    def process_guess(self, my_guess, supress=True):
+        self.remaining_words = self.remaining_words[~(self.remaining_words == my_guess)]
+        misses, self.matches, exact_matches, inexact_matches = word_match(my_guess, self.target_word)
+        self.all_misses.update(misses)
+        # Reduce the remaining words based on the match results
+        self.remaining_words  = self.refine_list(misses, exact_matches, inexact_matches, self.remaining_words)
         if not supress:
             print(my_guess)
             if self.remaining_words.size == 0:
