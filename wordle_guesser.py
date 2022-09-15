@@ -107,7 +107,7 @@ class play_wordle():
     
     def process_guess(self, my_guess, supress=True):
         self.remaining_words = self.remaining_words[~(self.remaining_words == my_guess)]
-        self.misses, self.matches, self.exact_matches, self.inexact_matches = word_match(my_guess, self.todays_word)
+        self.misses, _, self.exact_matches, self.inexact_matches = word_match(my_guess, self.todays_word)
         self.all_misses.update(self.misses)
         # Reduce the remaining words based on the match results
         self.remaining_words  = refine_list(self.misses, self.exact_matches, self.inexact_matches, self.remaining_words)
@@ -146,7 +146,7 @@ class simple_solver():
 
     def process_guess(self, my_guess, supress=True):
         self.remaining_words = self.remaining_words[~(self.remaining_words == my_guess)]
-        misses, self.matches, exact_matches, inexact_matches = word_match(my_guess, self.target_word)
+        misses, _, exact_matches, inexact_matches = word_match(my_guess, self.target_word)
         self.all_misses.update(misses)
         # Reduce the remaining words based on the match results
         self.remaining_words  = self.refine_list(misses, exact_matches, inexact_matches, self.remaining_words)
