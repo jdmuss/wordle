@@ -31,6 +31,7 @@ import numpy as np
 import re
 
 def get_words(word_list, n=1):
+    """ This will get a random sample of n words from a word list (array)."""
     return random.choices(word_list, k=n)
 
 
@@ -58,26 +59,15 @@ def word_match(guess, word):
     inexact_matches, _ = zip(*exact_matches) if exact_matches else (set(), None)
     inexact_matches = matches.difference(inexact_matches)
     inexact_matches = [(l, guess.index(l)) for l in inexact_matches]
-    return misses, matches, exact_matches, inexact_matches
-
-
-def refine_list(misses, exact_matches, inexact_matches, word_list):
-    # Remove words that contain letters not in the guess
-    new_list = [word for word in word_list if misses.isdisjoint(word)]
-    # Only keep words with exact matches in the guess
-    if exact_matches:
-        new_list = get_exact_matches(exact_matches, new_list)
-    # Only keep words with inexact matches in the guess, but not in the missed position
-    if inexact_matches:
-        new_list = get_inexact_matches(inexact_matches, new_list)
-    return np.array(new_list)
+    return misses, exact_matches, inexact_matches
 
 
 class play_wordle():
-    wordle_start_date = datetime(2021, 6, 1)
+    wordle_start_date = datetime(2021, 6, 3)
     def __init__(self, source_list='wordle_words_unsorted.txt'):
         self.wordle_dict = source_list
         self.reset_wordle(read_word_list=True)
+        self.solver = None
     
     def reset_wordle(self, read_word_list=False):
         if read_word_list:
@@ -100,57 +90,62 @@ class play_wordle():
         return self.todays_word
     
     def make_a_guess(self, guess=None):
-        if not guess:
-            # Let the computer try to solve the wordle
-            guess = random.choices(self.remaining_words, k=1)[0]
-        self.process_guess(guess)
-    
+        # Enter new code, or get rid of this
+        pass
+        
     def process_guess(self, my_guess, supress=True):
-        self.remaining_words = self.remaining_words[~(self.remaining_words == my_guess)]
-        self.misses, _, self.exact_matches, self.inexact_matches = word_match(my_guess, self.todays_word)
-        self.all_misses.update(self.misses)
-        # Reduce the remaining words based on the match results
-        self.remaining_words  = refine_list(self.misses, self.exact_matches, self.inexact_matches, self.remaining_words)
-        if not supress:
-            print(my_guess)
-            if self.remaining_words.size == 0:
-                print(f"Your word {my_guess} was today's word. You win!")
+        # Enter new code, or get rid of this
+        pass
+    
+    def solve_wordle(self, seed=None, today=True, idx=None, random=False):
+        # Fix this, or put it in the solver template
+        if self.solver:
+            word = self.get_a_word(today=today, idx=idx, random=random)
+            if seed:
+                guesses = 1
+                self.solver.make_a_guess(seed)
             else:
-                print(f"Keep guessing, the pool still contains {self.remaining_words.size:,} words.")
+                guesses = 0
+                self.solver.make_a_guess()
+            while self.solver.remaining_words.size > 0:
+                self.solver.make_a_guess()
+                guesses += 1
+            return guesses
+        else:
+            print("Error: please load a solver model before runing the solver method.")
 
 
 class simple_solver():
-    wordle_start_date = datetime(2021, 6, 1)
     def __init__(self, target_word, word_list):
         self.target_word = target_word
-        self.words = word_list
+        self.words = copy(word_list)
         self.remaining_words = np.array(self.words)
         self.all_misses = set()
     
-    def make_a_guess(self, guess=None):
+    def make_a_guess(self, guess=None, verbose=True):
         if not guess:
             # Let the computer try to solve the wordle
             guess = random.choices(self.remaining_words, k=1)[0]
-        self.process_guess(guess)
+        self.process_guess(guess, verbose)
     
-    def refine_list(self, misses, exact_matches, inexact_matches, word_list):
+    def refine_list(self, misses, exact_matches, inexact_matches):
         # Remove words that contain letters not in the guess
-        new_list = [word for word in word_list if misses.isdisjoint(word)]
+        new_list = [word for word in self.remaining_words if misses.isdisjoint(word)]
         # Only keep words with exact matches in the guess
         if exact_matches:
             new_list = get_exact_matches(exact_matches, new_list)
         # Only keep words with inexact matches in the guess, but not in the missed position
         if inexact_matches:
             new_list = get_inexact_matches(inexact_matches, new_list)
-        return np.array(new_list)
+        self.remaining_words = np.array(new_list)
 
-    def process_guess(self, my_guess, supress=True):
+    def process_guess(self, my_guess, verbose=True):
         self.remaining_words = self.remaining_words[~(self.remaining_words == my_guess)]
-        misses, _, exact_matches, inexact_matches = word_match(my_guess, self.target_word)
+        misses, exact_matches, inexact_matches = word_match(my_guess, self.target_word)
         self.all_misses.update(misses)
         # Reduce the remaining words based on the match results
-        self.remaining_words  = self.refine_list(misses, exact_matches, inexact_matches, self.remaining_words)
-        if not supress:
+        self.refine_list(misses, exact_matches, inexact_matches)
+        if verbose:
             print(my_guess)
             if self.remaining_words.size == 0:
                 print(f"Your word {my_guess} was today's word. You win!")
