@@ -30,6 +30,15 @@ import random
 import numpy as np
 import re
 
+class solver_template(object):
+    def __init__(self, target_word, word_list):
+        self.target_word = target_word
+        self.words = copy(word_list)
+    
+    def make_a_guess(self, guess=None, verbose=False):
+        return guess
+
+
 def get_words(word_list, n=1):
     """ This will get a random sample of n words from a word list (array)."""
     return random.choices(word_list, k=n)
@@ -89,14 +98,6 @@ class play_wordle():
             self.todays_word = self.words[idx]
         return self.todays_word
     
-    def make_a_guess(self, guess=None):
-        # Enter new code, or get rid of this
-        pass
-        
-    def process_guess(self, my_guess, supress=True):
-        # Enter new code, or get rid of this
-        pass
-    
     def solve_wordle(self, seed=None, today=True, idx=None, random=False):
         # Fix this, or put it in the solver template
         if self.solver:
@@ -115,10 +116,9 @@ class play_wordle():
             print("Error: please load a solver model before runing the solver method.")
 
 
-class simple_solver():
-    def __init__(self, target_word, word_list):
-        self.target_word = target_word
-        self.words = copy(word_list)
+class simple_solver(solver_template):
+    def __init__(self):
+        super(simple_solver, self).__init()
         self.remaining_words = np.array(self.words)
         self.all_misses = set()
     
@@ -127,6 +127,7 @@ class simple_solver():
             # Let the computer try to solve the wordle
             guess = random.choices(self.remaining_words, k=1)[0]
         self.process_guess(guess, verbose)
+        return guess
     
     def refine_list(self, misses, exact_matches, inexact_matches):
         # Remove words that contain letters not in the guess
