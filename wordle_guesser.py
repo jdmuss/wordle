@@ -5,7 +5,7 @@ Description:
     This code explores various software-based solutions of Wordle.
 
 Creation Date: 05-01-2022?
-Last Modified: 09-02-2022
+Last Modified: 09-27-2022
 
 Version: 1.0.2
 
@@ -21,7 +21,10 @@ Changes:
     xx-xx-2022
 
 ToDo:
-    Pull the solver code out and let the play_wordle class accept any solver, and have it generate stats.
+    1) Finish the doc strings.
+    2) Make a stats generation function?
+    3) Make a plotting function.
+    4) Make a graphical solver.
 """
 from collections import Counter
 from copy import copy
@@ -29,54 +32,49 @@ from datetime import datetime
 import random
 import numpy as np
 import re
-
+#-----------------------------------------------------
+# Base classes:
+#-----------------------------------------------------
 class solver_template(object):
+    """
+    This solver template loads the target word and the word list. The 'make_a_guess' function is stubbed
+    out to accept a guess, and print messages if the 'verbose' parameter is set to true.
+
+    Parameters
+    ----------
+    target_word: str
+        the word that the solver is trying to guess.
+    word_list: list
+       the list of words from which to draw. Wordle uses a list of 14,855 five letter words by default.
+    """
     def __init__(self, target_word, word_list):
         self.target_word = target_word
         self.words = copy(word_list)
     
     def make_a_guess(self, guess=None, verbose=False):
+        """
+        This is the stubbed function to accept a guess, and print messages if the 'verbose' parameter is set to true.
+
+        Parameters
+        ----------
+        guess: str
+            if specified, a single guess for the solver (default=None, i.e. let the solver make it's own guess).
+        verbose: bool
+            a directive of whether or not to print messages to the console.
+
+        Returns
+        ----------
+        guess
+            the guess made by the solver (or provided to the solver)
+        """
         return guess
 
 
-def get_words(word_list, n=1):
-    """ This will get a random sample of n words from a word list (array)."""
-    return random.choices(word_list, k=n)
-
-
-def get_matches(match_str, word):
-    return sorted([(m.group(), m.start()) for m in re.finditer(match_str, word)])
-
-
-def get_exact_matches(exact_matches, word_list):
-    regex_match = f"[{''.join(l for l, _ in exact_matches)}]"
-    return [word for word in word_list if get_matches(regex_match, word) == sorted(exact_matches)]
-
-
-def get_inexact_matches(inexact_matches, word_list):
-    tmp_list = word_list
-    for match in inexact_matches:
-        regex_match = f"[{match[0]}]"
-        tmp_list =[word for word in tmp_list if get_matches(regex_match, word) != [match]]
-    return tmp_list
-
-
-def word_match(guess, word):
-    misses = set(guess).difference(word)
-    matches = set(guess).intersection(word)
-    exact_matches = [(l, guess.index(l)) for l in matches if guess.index(l) == word.index(l)]
-    inexact_matches, _ = zip(*exact_matches) if exact_matches else (set(), None)
-    inexact_matches = matches.difference(inexact_matches)
-    inexact_matches = [(l, guess.index(l)) for l in inexact_matches]
-    return misses, exact_matches, inexact_matches
-
-
 class play_wordle():
-    wordle_start_date = datetime(2021, 6, 3)
-    def __init__(self, source_list='wordle_words_unsorted.txt'):
+    wordle_start_date = datetime(2021, 6, 19)
+    def __init__(self, source_list='wordle_words.txt'):
         self.wordle_dict = source_list
         self.reset_wordle(read_word_list=True)
-        self.solver = None
     
     def reset_wordle(self, read_word_list=False):
         if read_word_list:
@@ -90,32 +88,85 @@ class play_wordle():
     
     def get_a_word(self, idx=0, random=False, today=False):
         if today:
-            idx_today = (datetime.today() - self.wordle_start_date).days + 1
+            idx_today = (datetime.today() - self.wordle_start_date).days
             self.todays_word = self.words[idx_today]
         elif random:
             self.todays_word = self.words[random.range(len(self.words))]
         else:
             self.todays_word = self.words[idx]
         return self.todays_word
-    
-    def solve_wordle(self, seed=None, today=True, idx=None, random=False):
-        # Fix this, or put it in the solver template
-        if self.solver:
-            word = self.get_a_word(today=today, idx=idx, random=random)
-            if seed:
-                guesses = 1
-                self.solver.make_a_guess(seed)
-            else:
-                guesses = 0
-                self.solver.make_a_guess()
-            while self.solver.remaining_words.size > 0:
-                self.solver.make_a_guess()
-                guesses += 1
-            return guesses
-        else:
-            print("Error: please load a solver model before runing the solver method.")
+#-----------------------------------------------------
+# Base functions:
+#-----------------------------------------------------
+def get_words(word_list, n=1):
+    """ This will get a random sample of n words from a word list (array)."""
+    return random.choices(word_list, k=n)
 
 
+def get_matches(match_str, word):
+    return set([(m.group(), m.start()) for m in re.finditer(match_str, word)])
+
+
+def get_exact_matches(exact_matches, word_list):
+    regex_match = f"[{''.join(l for l, _ in exact_matches)}]"
+    return [word for word in word_list if get_matches(regex_match, word).issuperset(exact_matches)]
+
+
+def get_inexact_matches(inexact_matches, word_list):
+    tmp_list = word_list
+    for match in inexact_matches:
+        regex_match = f"[{match[0]}]"
+        tmp_list =[word for word in tmp_list if get_matches(regex_match, word) != [match]]
+    return tmp_list
+
+
+def word_match(guess, target):
+    """
+    This function compares a guessed word against a target word and returns information about which
+    letters in the guess missed and matched letters in the target.
+
+    Parameters
+    ----------
+    guess: str
+        the solver's guess at the wordle word
+    target: str
+       the wordle word that the solver is trying to find
+
+    Returns
+    ----------
+    misses:set
+        a list of letters that were in the guessed word, but not in the target word
+    exact_matches:list
+        a list of letters that were in both the guessed and target words, and in the same place
+    inexact_matches:list
+        a list of letters that were in both the guessed and target words, but not in the same place
+    """
+    misses = set(guess).difference(target)
+    matches = set(guess).intersection(target)
+    exact_matches = [(letter, idx) for idx, letter in enumerate(guess) if letter == target[idx]]
+    inexact_matches, _ = zip(*exact_matches) if exact_matches else (set(), None)
+    inexact_matches = matches.difference(inexact_matches)
+    inexact_matches = [(l, guess.index(l)) for l in inexact_matches]
+    return misses, exact_matches, inexact_matches
+
+
+def solve_wordle(solver_class, seed=None, today=True, idx=None, random=False, verbose=False):
+    wordle = play_wordle()
+    word = wordle.get_a_word(today=today, idx=idx, random=random)
+    solver = solver_class(word, wordle.words)
+    if seed:
+        guesses = 1
+        solver.make_a_guess(seed, verbose=verbose)
+    else:
+        guesses = 0
+        solver.make_a_guess(verbose=verbose)
+    while solver.remaining_words.size > 0:
+        solver.make_a_guess(verbose=verbose)
+        guesses += 1
+    return guesses
+#-----------------------------------------------------
+# Solver classes:
+#-----------------------------------------------------
 class simple_solver(solver_template):
     def __init__(self):
         super(simple_solver, self).__init()
@@ -157,21 +208,6 @@ class simple_solver(solver_template):
 '''
 Start Code here
 '''
-def solve_wordle(seed=None, today=True, idx=None, random=False):
-    wordle = play_wordle()
-    wordle.get_a_word(today=today, idx=idx, random=random)
-    if seed:
-        guesses = 1
-        wordle.make_a_guess(seed)
-    else:
-        guesses = 0
-        wordle.make_a_guess()
-    while wordle.remaining_words.size > 0:
-        wordle.make_a_guess()
-        guesses += 1
-    return guesses
-
-
 def remove_old_solver(seed=None, today=True, idx=None, random=False):
     wordle_start_date = datetime(2021, 6, 1)
     today_idx = (datetime.today() - wordle_start_date).days + 1
@@ -193,8 +229,7 @@ def remove_old_solver(seed=None, today=True, idx=None, random=False):
     return guesses
 
 """# todays_word = wordle.get_a_word(today=today)"""
-# Prize --> idx = 457
-solver_dist = [solve_wordle(seed='prize', today=True, idx=None, random=False) for i in range(1000)]
+solver_dist = [solve_wordle(simple_solver, today=True, idx=None, random=False) for i in range(1000)]
 print("-"*40)
 print("Simple Solver stats:")
 print(f"Fastest: {min(solver_dist)} guesses")
